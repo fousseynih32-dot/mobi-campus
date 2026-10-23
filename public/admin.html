@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin — Mobi-Campus</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-900 text-white min-h-screen p-4 font-sans">
+
+<div id="loginView" class="max-w-sm mx-auto mt-20 bg-slate-800 p-6 rounded-2xl shadow-xl">
+  <h1 class="text-xl font-bold mb-4 text-center">
+    <i class="fa-solid fa-shield-halved text-emerald-400"></i> Espace Propriétaire
+  </h1>
+  <input id="pwd" type="password" placeholder="Mot de passe admin"
+    class="w-full p-3 rounded-lg bg-slate-700 border border-slate-600 text-sm mb-3">
+  <button onclick="login()" class="w-full bg-emerald-600 hover:bg-emerald-500 py-2.5 rounded-lg font-bold text-sm">
+    Se connecter
+  </button>
+  <p id="loginErr" class="text-red-400 text-xs mt-2 text-center hidden">Mot de passe incorrect</p>
+</div>
+
+<div id="dashView" class="hidden max-w-4xl mx-auto">
+  <header class="flex justify-between items-center mb-6">
+    <h1 class="text-lg font-bold"><i class="fa-solid fa-shield-halved text-emerald-400"></i> Admin Mobi-Campus</h1>
+    <button onclick="logout()" class="text-xs bg-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-600">
+      <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+    </button>
+  </header>
+
+  <div id="stats" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6"></div>
+
+  <div class="bg-slate-800 p-5 rounded-2xl mb-6">
+    <h2 class="font-bold text-sm mb-3"><i class="fa-solid fa-key text-yellow-400"></i> Générer un nouveau code</h2>
+    <button onclick="generateCode()" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg text-sm font-bold">
+      <i class="fa-solid fa-plus"></i> Générer MOBI-XXXX
+    </button>
+    <div id="newCodeBox" class="mt-4 hidden bg-slate-900 p-4 rounded-lg border border-emerald-500/30">
+      <p class="text-xs text-slate-400 mb-2">Nouveau code généré :</p>
+      <div class="flex flex-wrap items-center gap-3">
+        <span id="newCode" class="font-mono text-2xl font-bold text-emerald-400"></span>
+        <button onclick="copyCode()" class="text-xs bg-slate-700 px-3 py-1.5 rounded-lg">
+          <i class="fa-regular fa-copy"></i> Copier
+        </button>
+        <a id="newWa" target="_blank" class="text-xs bg-green-600 hover:bg-green-500 px-3 py-1.5 rounded-lg font-bold">
+          <i class="fa-brands fa-whatsapp"></i> Envoyer WhatsApp
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-slate-800 p-5 rounded-2xl">
+    <h2 class="font-bold text-sm mb-3"><i class="fa-solid fa-list text-blue-400"></i> Tous les codes</h2>
+    <div id="codesList" class="space-y-2 max-h-96 overflow-y-auto"></div>
+  </div>
+</div>
+
+<script>
+let newCodeValue = '';
+
+async function login() {
+  const pwd = document.getElementById('pwd').value;
+  const r = await fetch('/api/admin/login', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ password: pwd })
+  });
+  if (r.ok) {
+    document.getElementById('loginView').classList.add('hidden');
+    document.getElementById('dashView').classList.remove('hidden');
+    loadStats(); loadCodes();
+  } else {
+    document.getElementById('loginErr').classList.remove('hidden');
+  }
+}
+
+async function logout() { await fetch('/api/admin/logout', {method:'POST'}); location.reload(); }
+
+async function loadStats() {
+  const r = await fetch('/api/admin/stats');
+  if (!r.ok) return location.reload();
+  const s = await r.json();
+  document.getElementById('stats').innerHTML = `
+    <div class="bg-slate-800 p-4 rounded-xl"><p class="text-xs text-slate-400">Total codes</p><p class="text-2xl font-bold">${s.total}</p></div>
+    <div class="bg-slate-800 p-4 rounded-xl"><p class="text-xs text-slate-400">Utilisés</p><p class="text-2xl font-bold text-yellow-400">${s.used}</p></div>
+    <div class="bg-slate-800 p-4 rounded-xl"><p class="text-xs text-slate-400">Dispo</p><p class="text-2xl font-bold text-emerald-400">${s.available}</p></div>
+    <div class="bg-slate-800 p-4 rounded-xl"><p class="text-xs text-slate-400">Trajets</p><p class="text-2xl font-bold text-blue-400">${s.t

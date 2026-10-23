@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobi-Campus — Kalandenw ka taama</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="i18n.js"></script>
+  <style>
+    .gradient-bg { background: linear-gradient(135deg, #059669 0%, #10b981 50%, #047857 100%); }
+    .weekday-chip span {
+      display: inline-block; padding: 4px 8px; border-radius: 6px; background: white;
+      border: 1px solid #6ee7b7; color: #065f46; font-size: 10px; font-weight: 700;
+      cursor: pointer; transition: all .15s;
+    }
+    .weekday-chip input:checked + span { background: #059669; color: white; border-color: #059669; }
+  </style>
+</head>
+<body class="bg-gray-50 font-sans antialiased pb-20">
+
+  <!-- Toast -->
+  <div id="toastNotification" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-md bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3 transition-all duration-300 -translate-y-20 opacity-0 pointer-events-none">
+    <i class="fa-solid fa-circle-check text-xl text-yellow-300"></i>
+    <span id="toastMessage" class="text-xs font-bold leading-tight"></span>
+  </div>
+
+  <!-- Header -->
+  <header class="gradient-bg text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <i class="fa-solid fa-motorcycle text-xl text-yellow-300"></i>
+        <div>
+          <h1 class="text-base font-bold leading-tight">Mobi-Campus</h1>
+          <p class="text-[9px] text-emerald-100 leading-tight">
+            <span class="font-bold">Kalandenw ka taama</span> · Trajets étudiants
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <select id="langSelect" onchange="setLang(this.value)"
+          class="bg-emerald-700 text-white text-[10px] font-bold px-1.5 py-1 rounded-md border-0">
+          <option value="bi">🇲🇱 BAM+FR</option>
+          <option value="bm">🇲🇱 Bamanankan</option>
+          <option value="fr">🇫🇷 Français</option>
+          <option value="en">🇬🇧 English</option>
+        </select>
+        <span id="subStatusBadge" class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold"></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Bandeau nationaliste -->
+  <div class="gradient-bg text-white text-center py-1.5 text-[10px] border-t border-emerald-700">
+    <span class="font-bold">🇲🇱 An bɛ Bamakɔ kalandenw deme</span>
+    <span class="text-emerald-100">· Nous soutenons les étudiants de Bamako</span>
+  </div>
+
+  <datalist id="bamakoLocations">
+    <option value="Campus de Kabala"></option>
+    <option value="Colline de Badalabougou (FST/FHG/FSEG)"></option>
+    <option value="IPR/IFRA Katibougou"></option>
+    <option value="Lycée Technique de Bamako"></option>
+    <option value="Kalaban Coura"></option>
+    <option value="Kalaban Coro"></option>
+    <option value="Sabalibougou"></option>
+    <option value="ACI 2000"></option>
+    <option value="Hamdallaye"></option>
+    <option value="Lafiabougou"></option>
+    <option value="Sebenikoro"></option>
+    <option value="Badalabougou"></option>
+    <option value="Sogoniko"></option>
+    <option value="Magnambougou"></option>
+    <option value="Yirimadio"></option>
+    <option value="Faladié"></option>
+    <option value="Banankabougou"></option>
+    <option value="Niamakoro"></option>
+    <option value="Baco Djicoroni"></option>
+  </datalist>
+
+  <main class="max-w-md mx-auto px-4 mt-4 space-y-4">
+
+    <!-- Banner Premium -->
+    <div id="subBanner" class="bg-emerald-50 border-l-4 border-emerald-500 p-3 rounded-r-lg shadow-sm">
+      <div class="flex justify-between items-center gap-2">
+        <div>
+          <h3 class="text-xs font-bold text-emerald-900">
+            <span class="block">Kalanden ka bon</span>
+            <span class="block text-[10px] font-normal text-emerald-700">Pass Étudiant Illimité</span>
+          </h3>
+          <p class="text-[10px] text-emerald-700 mt-0.5">
+            <strong>100 FCFA / kalo</strong> · 100 FCFA / mois
+          </p>
+        </div>
+        <button onclick="openSubModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm whitespace-nowrap">
+          <span class="block">I bon</span>
+          <span class="block text-[9px] font-normal">S'abonner</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Onglets -->
+    <div class="bg-white p-1 rounded-xl shadow-sm border border-gray-100 flex">
+      <button id="tabFind" onclick="switchTab('find')" class="flex-1 py-2 text-center text-xs font-bold rounded-lg bg-emerald-600 text-white shadow-sm transition-all leading-tight">
+        <i class="fa-solid fa-magnifying-glass mr-1"></i>
+        <span class="block text-[11px] font-bold">Taama dilan</span>
+        <span class="block text-[9px] opacity-90 font-normal">Trouver un trajet</span>
+      </button>
+      <button id="tabOffer" onclick="switchTab('offer')" class="flex-1 py-2 text-center text-xs font-bold rounded-lg text-gray-500 hover:text-emerald-600 transition-all leading-tight">
+        <i class="fa-solid fa-plus-circle mr-1"></i>
+        <span class="block text-[11px] font-bold">Taama di</span>
+        <span class="block text-[9px] opacity-90 font-normal">Proposer un trajet</span>
+      </button>
+    </div>
+
+    <!-- Recherche -->
+    <div id="sectionFind" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-3">
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1">
+          <i class="fa-solid fa-location-dot text-emerald-600 mr-1"></i>
+          <span class="font-bold">Bɔ yɔrɔ</span> <span class="text-[10px] text-gray-400 font-normal">(Point de départ)</span>
+        </label>
+        <input type="text" id="searchFrom" list="bamakoLocations" placeholder="Ex: Kalaban..."
+          class="w-full bg-gray-50 border border-gray-200 text-xs rounded-lg p-2.5">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1">
+          <i class="fa-solid fa-flag-checkered text-red-500 mr-1"></i>
+          <span class="font-bold">Se yɔrɔ</span> <span class="text-[10px] text-gray-400 font-normal">(Destination)</span>
+        </label>
+        <input type="text" id="searchTo" list="bamakoLocations" placeholder="Ex: Kabala..."
+          class="w-full bg-gray-50 border border-gray-200 text-xs rounded-lg p-2.5">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1">
+          <i class="fa-solid fa-calendar text-emerald-600 mr-1"></i>
+          <span class="font-bold">Don</span> <span class="text-[10px] text-gray-400 font-normal">(Date)</span>
+        </label>
+        <input type="date" id="searchDate" class="w-full bg-gray-50 border border-gray-200 text-xs rounded-lg p-2.5">
+      </div>
+      <button id="btnSearch" onclick="filterTrajets()"
+        class="w-full bg-emerald-600 text-white py-2.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition flex items-center justify-center space-x-2">
+        <i class="fa-solid fa-search mr-1"></i>
+        <span id="btnSearchText">
+          <span class="font-bold">Taama ñini</span>
+          <span class="text-[10px] opacity-90 ml-1">· Rechercher</span>
+        </span>
+        <i id="btnSearchSpinner" class="fa-solid fa-spinner fa-spin hidden text-sm"></i>
+      </button>
+    </div>
+
+    <!-- Proposer -->
+    <div id="sectionOffer" class="hidden bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-3">
+      <h3 class="text-xs font-bold text-gray-800 border-b pb-2">
+        <span class="block">I taama di</span>
+        <span class="block text-[10px] font-normal text-gray-500">Publier votre itinéraire</span>
+      </h3>
+
+      <div class="grid grid-cols-2 gap-2">
+        <input type="text" id="driverName" placeholder="Tɔgɔ / Nom"
+          class="bg-gray-50 border border-gray-200 text-xs rounded-lg p-2.5">
+        <select id="vehicleType" class="bg-gray-50 border border-gray-200 text-xs rounded-lg p-2.5">
+          <option>Moto Djakarta</option>
+          <option>Moto TVS / Kasea</option>
+          <option>Voiture</option>
+        </select>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <input type="text" id="offerFrom" list="bamakoLocations" placeholder="Bɔyɔrɔ / Départ"
+          class="bg-gray-50 border border-gray-200 text-xs rounded-lg p-2.5">
+        <input type="text" id="offerTo" list="bamakoLocations" placeholder="Se yɔrɔ / Arrivée"
+          class="bg-gray-50 border border-gray-200 text-xs rounded-lg p-2.5">
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <input type="time" id="offerTime" value="07:30"
+          class="bg-gray-50 border border-gray-200 text-xs rounded-lg p-2.5">
+        <input type="number" id="offerPrice" value="200" min="50" max="10000" step="50"
+          placeholder="Sɔngɔ / Prix FCFA"
+          class="bg-gray-50 border border-gray-200 text-xs rounded-lg p-2.5">
+      </div>
+      <input type="tel" id="driverPhone" placeholder="WhatsApp (+223XXXXXXXX)"
+        pattern="^\+223[0-9]{8}$"
+        class="w-full bg-gray-50 border border-gray-200 text-xs rounded-lg p-2.5">
+
+      <!-- Zone récurrence v2 -->
+      <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 space-y-2">
+        <p class="text-[11px] font-bold text-emerald-900">
+          <i class="fa-solid fa-calendar-days mr-1"></i>
+          <span class="block">Ni taama bɛ kɛ tuma jumɛn?</span>
+          <span class="block text-[10px] font-normal text-emerald-700">Quand ce trajet a-t-il lieu ?</span>
+        </p>
+
+        <select id="periodType" onchange="updateRecurrenceUI()"
+          class="w-full bg-white border border-emerald-300 text-xs rounded-lg p-2.5 font-semibold">
+          <option value="once">📅 Une seule fois (Si kelen)</option>
+          <option value="period">🔁 Sur une période (Waati kɔnɔ)</option>
+        </select>
+
+        <div id="periodBox" class="hidden space-y-2 pt-1">
+          <p class="text-[10px] text-emerald-800 font-semibold">Motif :</p>
+          <select id="pattern" onchange="updatePatternUI()"
+            class="w-full bg-white border border-emerald-300 text-xs rounded-lg p-2.5">
+            <option value="everyday">Don bɛɛ · Tous les jours</option>
+            <option value="weekdays">Ntɛnɛn→Juma · Lun-Ven</option>
+            <option value="weekend">Sibiri ni Kari · Sam-Dim</option>
+            <option value="custom_days">Don dɔw · Certains jours</option>
+            <option value="month_days">Kalo donw · Certaines dates</option>
+          </select>
+
+          <div id="customDaysBox" class="hidden">
+            <p class="text-[10px] text-emerald-800 font-semibold mb-1">Donw (Jours) :</p>
+            <div class="flex flex-wrap gap-1">
+              <label class="weekday-chip"><input type="checkbox" value="1" class="hidden"><span>Ntɛ</span></label>
+              <label class="weekday-chip"><input type="checkbox" value="2" class="hidden"><span>Tar</span></label>
+              <label class="weekday-chip"><input type="checkbox" value="3" class="hidden"><span>Ara</span></label>
+              <label class="weekday-chip"><input type="checkbox" value="4" class="hidden"><span>Ala</span></label>
+              <label class="weekday-chip"><input type="checkbox" value="5" class="hidden"><span>Jum</span></label>
+              <label class="weekday-chip"><input type="checkbox" value="6" class="hidden"><span>Sib</span></label>
+              <label class="weekday-chip"><input type="checkbox" value="7" class="hidden"><span>Kar</span></label>
+            </div>
+          </div>
+
+          <div id="monthDaysBox" class="hidden">
+            <p class="text-[10px] text-emerald-800 font-semibold mb-1">Kalo donw (Dates 1-31) :</p>
+            <input type="text" id="monthDaysInput" placeholder="ex: 1, 15, 30"
+              class="w-full bg-white border border-emerald-300 text-xs rounded-lg p-2">
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <div>
+              <label class="text-[10px] text-emerald-800 font-semibold">Bɔ (Début)</label>
+              <input type="date" id="startDate" class="w-full bg-white border border-emerald-300 text-xs rounded-lg p-2">
+            </div>
+            <div>
+              <label class="text-[10px] text-emerald-800 font-semibold">Bannya (Fin)</label>
+              <input type="date" id="endDate" class="w-full bg-white border border-emerald-300 text-xs rounded-lg p-2">
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-1 pt-1">
+            <button type="button" onclick="setPeriodPreset('this_week')"
+              class="text-[10px] bg-white border border-emerald-300 text-emerald-800 px-2 py-1 rounded-md font-semibold hover:bg-emerald-100">
+              Nin dɔgɔkun
+            </button>
+            <button type="button" onclick="setPeriodPreset('this_month')"
+              class="text-[10px] bg-white border border-emerald-300 text-emerald-800 px-2 py-1 rounded-md font-semibold hover:bg-emerald-100">
+              Nin kalo
+            </button>
+            <button type="button" onclick="setPeriodPreset('this_semester')"
+              class="text-[10px] bg-white border border-emerald-300 text-emerald-800 px-2 py-1 rounded-md font-semibold hover:bg-emerald-100">
+              Nin semester
+            </button>
+            <button type="button" onclick="setPeriodPreset('forever')"
+              class="text-[10px] bg-white border border-emerald-300 text-emerald-800 px-2 py-1 rounded-md font-semibold hover:bg-emerald-100">
+              Fɔ ka fɔli wɛrɛ
+            </button>
+          </div>
+
+          <p id="recurrenceSummary" class="text-[10px] text-emerald-700 italic pt-1"></p>
+        </div>
+
+        <div id="onceBox" class="space-y-2 pt-1">
+          <label class="text-[10px] text-emerald-800 font-semibold">Don (Date) *</label>
+          <input type="date" id="onceDate" class="w-full bg-white border border-emerald-300 text-xs rounded-lg p-2">
+        </div>
+      </div>
+
+      <button id="btnPublish" onclick="checkAccessAndPublish()"
+        class="w-full bg-emerald-600 text-white py-2.5 rounded-lg text-xs font-bold hover:bg-emerald-700 transition flex items-center justify-center space-x-2">
+        <span id="btnPublishText">
+          <span class="font-bold">Taama di</span>
+          <span class="text-[10px] opacity-90 ml-1">· Publier</span>
+        </span>
+        <i id="btnPublishSpinner" class="fa-solid fa-spinner fa-spin hidden text-sm"></i>
+      </button>
+    </div>
+
+    <!-- Liste trajets -->
+    <div>
+      <div class="flex justify-between items-center mb-2 px-1">
+        <h2 class="text-xs font-bold text-gray-700 uppercase">
+          <span class="font-bold">Taama minnu bɛ yen</span>
+          <span class="text-[10px] text-gray-400 font-normal normal-case">· Trajets disponibles</span>
+        </h2>
+        <span id="trajetCount" class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full"></span>
+      </div>
+
+      <div id="globalSpinner" class="hidden text-center py-8">
+        <i class="fa-solid fa-circle-notch fa-spin text-emerald-600 text-3xl mb-2"></i>
+        <p class="text-xs text-gray-500 font-semibold">A bɛ ñini... · Recherche...</p>
+      </div>
+
+      <div id="trajetsList" class="space-y-3"></div>
+    </div>
+
+    <!-- Glossaire culturel -->
+    <div class="bg-gradient-to-br from-emerald-600 to-green-700 text-white rounded-xl p-4 shadow-md">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-2xl">🇲🇱</span>
+        <div>
+          <p class="text-xs font-bold">Bamanankan dɔn</p>
+          <p class="text-[10px] text-emerald-100">Petit lexique du covoiturage</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-[11px]">
+        <div><span class="font-bold">Taama</span> · Trajet</div>
+        <div><span class="font-bold">Kalanden</span> · Étudiant</div>
+        <div><span class="font-bold">Bɔyɔrɔ</span> · Départ</div>
+        <div><span class="font-bold">Se yɔrɔ</span> · Arrivée</div>
+        <div><span class="font-bold">Sɔngɔ</span> · Prix</div>
+        <div><span class="font-bold">Waati</span> · Heure</div>
+        <div><span class="font-bold">I ni ce</span> · Merci</div>
+        <div><span class="font-bold">K'an bɛn</span> · Au revoir</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal abonnement -->
+  <div id="subModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-xs w-full p-5 space-y-4 shadow-xl text-center">
+      <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-gray-800 text-sm">
+          <span class="block">Kalanden ka bon</span>
+          <span class="block text-[11px] text-gray-500 font-normal">Pass Mensuel Mobi-Campus</span>
+        </h3>
+        <div class="text-2xl font-black text-emerald-600 mt-2">100 FCFA <span class="text-xs text-gray-400 font-normal">/ 30 j</span></div>
+      </div>
+
+      <div class="bg-gray-50 p-3 rounded-lg text-left text-xs space-y-2 border border-gray-200">
+        <p class="font-bold text-gray-700">1. Envoyez 100 FCFA au :</p>
+        <p class="text-emerald-800 font-bold text-sm bg-emerald-100 p-1.5 rounded text-center">+223 77 48 41 48</p>
+        <p class="font-bold text-gray-700 pt-1">2. Envoyez la preuve sur WhatsApp :</p>
+        <button onclick="sendProofWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded text-xs font-bold flex items-center justify-center space-x-1">
+          <i class="fa-brands fa-whatsapp text-sm"></i>
+          <span>Envoyer la preuve</span>
+        </button>
+        <p class="font-bold text-gray-700 pt-1">3. Entrez votre code :</p>
+        <input type="text" id="activationCodeInput" placeholder="Ex: MOBI-7842"
+          class="w-full p-2 border rounded bg-white font-mono text-xs uppercase">
+      </div>
+
+      <button onclick="verifyAndActivateSub()"
+        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg text-xs font-bold shadow-md">
+        <span class="block">I bon kɛ</span>
+        <span class="block text-[10px] font-normal">Activer mon abonnement</span>
+      </button>
+      <button onclick="closeSubModal()" class="text-xs text-gray-400 font-medium">A bila · Annuler</button>
+    </div>
+  </div>
+
+  <script>
+    // ─── Init langue ───
+    document.getElementById('langSelect').value = window.currentLang;
+
+    // ─── Device ID ───
+    const DEVICE_ID = localStorage.getItem('mobi_device') || crypto.randomUUID();
+    localStorage.setItem('mobi_device', DEVICE_ID);
+
+    let isSubscribed = false;
+    let isProcessing = false;
+    let trajets = [];
+
+    // ─── Toast bilingue ───
+    function showToast(frMessage) {
+      const bm = (window.I18N[frMessage]?.bm) || frMessage;
+      const en = (window.I18N[frMessage]?.en) || frMessage;
+      const toast = document.getElementById('toastNotification');
+      let html;
+      if (window.currentLang === 'fr') html = frMessage;
+      else if (window.currentLang === 'bm') html = bm;
+      else if (window.currentLang === 'en') html = en;
+      else html = `<span class="block font-bold">${bm}</span><span class="block text-[10px] opacity-90">${frMessage}</span>`;
+      document.getElementById('toastMessage').innerHTML = html;
+
+      toast.classList.remove('-translate-y-20', 'opacity-0', 'pointer-events-none');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('-translate-y-20', 'opacity-0', 'pointer-events-none');
+      }, 3500);
+    }
+
+    // ─── Statut abonnement ───
+    async function checkStatus() {
+      const r = await fetch('/api/status/' + DEVICE_ID);
+      const d = await r.json();
+      isSubscribed = d.subscribed;
+      const badge = document.getElementById('subStatusBadge');
+      if (isSubscribed) {
+        badge.className = "bg-emerald-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold";
+        badge.textContent = window.currentLang === 'en' ? 'Active' : (window.currentLang === 'fr' ? 'Abonné Actif' : 'Bon kɛra');
+        document.getElementById('subBanner').classList.add('hidden');
+      } else {
+        badge.className = "bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold";
+        badge.textContent = window.currentLang === 'en' ? 'Not subscribed' : (window.currentLang === 'fr' ? 'Non Abonné' : 'Ma bon');
+      }
+    }
+
+    // ─── Rendu trajets ───
+    function recurrenceLabel(t) {
+      const map = {1:'Lun',2:'Mar',3:'Mer',4:'Jeu',5:'Ven',6:'Sam',7:'Dim'};
+      if (t.period_type === 'once')
+        return { icon:'📅', text:`Ponctuel · ${new Date(t.start_date).toLocaleDateString('fr-FR')}`, color:'bg-gray-100 text-gray-600' };
+
+      let motif = '';
+      switch (t.pattern) {
+        case 'everyday': motif = 'Tous les jours'; break;
+        case 'weekdays': motif = 'Lun→Ven'; break;
+        case 'weekend': motif = 'Sam & Dim'; break;
+        case 'custom_days': motif = (t.weekdays||'').split(',').map(d=>map[d]).join('·'); break;
+        case 'month_days': motif = `Le ${t.month_days?.replace(/,/g,', ')}`; break;
+      }
+      const fin = t.end_date ? `→ ${new Date(t.end_date).toLocaleDateString('fr-FR')}` : '· sans fin';
+      return { icon:'🔁', text:`${motif} ${fin}`, color:'bg-purple-50 text-purple-700' };
+    }
+
+    function renderTrajets(items) {
+      const list = document.getElementById('trajetsList');
+      document.getElementById('trajetCount').textContent = `${items.length} taama${items.length > 1 ? 'w' : ''}`;
+
+      if (!items.length) {
+        list.innerHTML = `<div class="text-center py-8 text-gray-400 bg-white rounded-xl border border-dashed border-gray-200">
+          <i class="fa-solid fa-route text-3xl mb-2 text-gray-300"></i>
+          <p class="text-xs font-bold">Taama ma sɔrɔ</p>
+          <p class="text-[10px]">Aucun trajet trouvé</p>
+        </div>`;
+        return;
+      }
+
+      list.innerHTML = items.map(t => {
+        const rec = recurrenceLabel(t);
+        return `
+        <div class="bg-white p-3.5 rounded-xl border border-gray-100 shadow-sm hover:border-emerald-200 transition">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <h4 class="text-xs font-bold text-gray-800">${t.driver}</h4>
+              <p class="text-[10px] text-gray-500"><i class="fa-solid fa-motorcycle text-emerald-600 mr-1"></i>${t.vehicle}</p>
+              <div class="flex flex-wrap items-center gap-1 mt-1">
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${rec.color}">${rec.icon} ${rec.text}</span>
+              </div>
+            </div>
+            <span class="text-xs font-extrabold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">${t.price} F</span>
+          </div>
+
+          <div class="my-2 py-2 border-y border-gray-50 grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <span class="text-[10px] text-gray-400 block font-bold uppercase">Bɔyɔrɔ</span>
+              <span class="font-semibold text-gray-700"><i class="fa-solid fa-circle-dot text-emerald-500 mr-1 text-[10px]"></i>${t.from_city}</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-gray-400 block font-bold uppercase">Se yɔrɔ</span>
+              <span class="font-semibold text-gray-700"><i class="fa-solid fa-location-dot text-red-500 mr-1 text-[10px]"></i>${t.to_city}</span>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-center pt-1">
+            <span class="text-xs text-gray-500 font-medium"><i class="fa-regular fa-clock text-amber-500 mr-1"></i>${t.time}</span>
+            <button onclick="contactDriver('${t.phone}', '${t.driver.replace(/'/g,'')}')"
+              class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg font-bold transition shadow-sm">
+              <i class="fa-brands fa-whatsapp mr-1"></i>
+              <span>Wele</span>
+            </button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ─── Chargement / filtre ───
+    async function loadTrajets() {
+      const r = await fetch('/api/trajets');
+      trajets = await r.json();
+      renderTrajets(trajets);
+    }
+
+    async function filterTrajets() {
+      if (isProcessing) return;
+      const from = document.getElementById('searchFrom').value.trim();
+      const to = document.getElementById('searchTo').value.trim();
+      const date = document.getElementById('searchDate').value;
+
+      const params = new URLSearchParams();
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
+      if (date) params.set('date', date);
+
+      const btn = document.getElementById('btnSearch');
+      const spinner = document.getElementById('btnSearchSpinner');
+      const globalSpinner = document.getElementById('globalSpinner');
+      const list = document.getElementById('trajetsList');
+
+      isProcessing = true;
+      btn.disabled = true;
+      spinner.classList.remove('hidden');
+      list.classList.add('hidden');
+      globalSpinner.classList.remove('hidden');
+
+      try {
+        const r = await fetch('/api/trajets?' + params.toString());
+        const items = await r.json();
+        renderTrajets(items);
+      } finally {
+        globalSpinner.classList.add('hidden');
+        list.classList.remove('hidden');
+        spinner.classList.add('hidden');
+        btn.disabled = false;
+        isProcessing = false;
+      }
+    }
+
+    // ─── Publication ───
+    async function checkAccessAndPublish() {
+      if (!isSubscribed) { openSubModal(); return; }
+      if (isProcessing) return;
+
+      const isPeriod = document.getElementById('periodType').value === 'period';
+      const payload = {
+        driver: document.getElementById('driverName').value.trim(),
+        vehicle: document.getElementById('vehicleType').value,
+        from: document.getElementById('offerFrom').value.trim(),
+        to: document.getElementById('offerTo').value.trim(),
+        time: document.getElementById('offerTime').value,
+        price: document.getElementById('offerPrice').value,
+        phone: document.getElementById('driverPhone').value.trim(),
+        period_type: isPeriod ? 'period' : 'once',
+        start_date: isPeriod ? document.getElementById('startDate').value : document.getElementById('onceDate').value,
+        end_date: isPeriod ? (document.getElementById('endDate').value || null) : null,
+        pattern: isPeriod ? document.getElementById('pattern').value : 'once',
+        weekdays: null,
+        month_days: null,
+        deviceId: DEVICE_ID,
+      };
+
+      if (!payload.driver || !payload.from || !payload.to || !payload.phone || !payload.start_date) {
+        return alert("Veuillez remplir tous les champs obligatoires.");
+      }
+
+      if (payload.pattern === 'custom_days') {
+        const days = [...document.querySelectorAll('#customDaysBox input:checked')].map(i => i.value);
+        if (!days.length) return alert("Choisissez au moins un jour.");
+        payload.weekdays = days.join(',');
+      }
+      if (payload.pattern === 'month_days') {
+        const raw = document.getElementById('monthDaysInput').value.trim();
+        if (!raw) return alert("Indiquez les dates du mois (ex: 1, 15).");
+        payload.month_days = raw;
+      }
+
+      const btn = document.getElementById('btnPublish');
+      const spinner = document.getElementById('btnPublishSpinner');
+      isProcessing = true;
+      btn.disabled = true;
+      spinner.classList.remove('hidden');
+
+      try {
+        const r = await fetch('/api/trajets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || 'Erreur');
+
+        ['driverName','offerFrom','offerTo','driverPhone'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('endDate').value = '';
+        document.querySelectorAll('#customDaysBox input:checked').forEach(i => i.checked = false);
+        document.getElementById('monthDaysInput').value = '';
+
+        switchTab('find');
+        await loadTrajets();
+        showToast("Trajet publié avec succès !");
+      } catch (e) {
+        alert(e.message);
+      } finally {
+        isProcessing = false;
+        btn.disabled = false;
+        spinner.classList.add('hidden');
+      }
+    }
+
+    // ─── Tabs ───
+    function switchTab(type) {
+      const findBtn = document.getElementById('tabFind');
+      const offerBtn = document.getElementById('tabOffer');
+      const sectionFind = document.getElementById('sectionFind');
+      const sectionOffer = document.getElementById('sectionOffer');
+      if (type === 'find') {
+        findBtn.className = "flex-1 py-2 text-center text-xs font-bold rounded-lg bg-emerald-600 text-white shadow-sm transition-all leading-tight";
+        offerBtn.className = "flex-1 py-2 text-center text-xs font-bold rounded-lg text-gray-500 hover:text-emerald-600 transition-all leading-tight";
+        sectionFind.classList.remove('hidden');
+        sectionOffer.classList.add('hidden');
+      } else {
+        offerBtn.className = "flex-1 py-2 text-center text-xs font-bold rounded-lg bg-emerald-600 text-white shadow-sm transition-all leading-tight";
+        findBtn.className = "flex-1 py-2 text-center text-xs font-bold rounded-lg text-gray-500 hover:text-emerald-600 transition-all leading-tight";
+        sectionOffer.classList.remove('hidden');
+        sectionFind.classList.add('hidden');
+      }
+    }
+
+    // ─── Récurrence UI ───
+    document.getElementById('onceDate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('startDate').value = new Date().toISOString().slice(0,10);
+
+    function updateRecurrenceUI() {
+      const isPeriod = document.getElementById('periodType').value === 'period';
+      document.getElementById('periodBox').classList.toggle('hidden', !isPeriod);
+      document.getElementById('onceBox').classList.toggle('hidden', isPeriod);
+      if (isPeriod) updatePatternUI();
+      updateSummary();
+    }
+
+    function updatePatternUI() {
+      const p = document.getElementById('pattern').value;
+      document.getElementById('customDaysBox').classList.toggle('hidden', p !== 'custom_days');
+      document.getElementById('monthDaysBox').classList.toggle('hidden', p !== 'month_days');
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const el = document.getElementById('recurrenceSummary');
+      const isPeriod = document.getElementById('periodType').value === 'period';
+      if (!isPeriod) { el.textContent = ''; return; }
+      const p = document.getElementById('pattern').value;
+      const s = document.getElementById('startDate').value;
+      const e = document.getElementById('endDate').value;
+      const labels = { everyday:"Tous les jours", weekdays:"Lun→Ven", weekend:"Sam & Dim", custom_days:"Jours choisis", month_days:"Dates choisies" };
+      let txt = `🗓️ ${labels[p]}`;
+      if (s) txt += ` · dès ${new Date(s).toLocaleDateString('fr-FR')}`;
+      if (e) txt += ` → ${new Date(e).toLocaleDateString('fr-FR')}`;
+      else txt += ` · sans fin`;
+      el.textContent = txt;
+    }
+
+    function setPeriodPreset(key) {
+      const today = new Date();
+      const fmt = d => d.toISOString().slice(0,10);
+      if (key === 'this_week') {
+        const day = today.getDay() || 7;
+        const monday = new Date(today); monday.setDate(today.getDate() - (day - 1));
+        const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+        document.getElementById('startDate').value = fmt(monday);
+        document.getElementById('endDate').value = fmt(sunday);
+        document.getElementById('pattern').value = 'everyday';
+      } else if (key === 'this_month') {
+        const first = new Date(today.getFullYear(), today.getMonth(), 1);
+        const last = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        document.getElementById('startDate').value = fmt(first);
+        document.getElementById('endDate').value = fmt(last);
+        document.getElementById('pattern').value = 'everyday';
+      } else if (key === 'this_semester') {
+        const m = today.getMonth() + 1;
+        let start, end;
+        if (m >= 9) { start = new Date(today.getFullYear(), 9, 1); end = new Date(today.getFullYear() + 1, 0, 31); }
+        else { start = new Date(today.getFullYear(), 1, 1); end = new Date(today.getFullYear(), 5, 30); }
+        document.getElementById('startDate').value = fmt(start);
+        document.getElementById('endDate').value = fmt(end);
+        document.getElementById('pattern').value = 'weekdays';
+      } else if (key === 'forever') {
+        document.getElementById('startDate').value = fmt(today);
+        document.getElementById('endDate').value = '';
+        document.getElementById('pattern').value = 'everyday';
+      }
+      updatePatternUI();
+    }
+
+    ['pattern','startDate','endDate'].forEach(id =>
+      document.getElementById(id).addEventListener('input', updateSummary));
+    document.getElementById('pattern').addEventListener('change', updatePatternUI);
+
+    // ─── Modal abonnement ───
+    function openSubModal() { document.getElementById('subModal').classList.remove('hidden'); }
+    function closeSubModal() { document.getElementById('subModal').classList.add('hidden'); }
+    function sendProofWhatsApp() {
+      window.open(`https://wa.me/22377484148?text=${encodeURIComponent("Bonjour, voici la preuve de paiement pour l'abonnement Mobi-Campus :")}`, '_blank');
+    }
+
+    async function verifyAndActivateSub() {
+      const code = document.getElementById('activationCodeInput').value.trim();
+      if (!code) return alert("Entrez votre code.");
+      try {
+        const r = await fetch('/api/activate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, deviceId: DEVICE_ID })
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error);
+        await checkStatus();
+        closeSubModal();
+        showToast("Abonnement activé avec succès !");
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    // ─── Contact ───
+    function contactDriver(phone, driver) {
+      if (!isSubscribed) { openSubModal(); return; }
+      window.open(`https://wa.me/${phone.replace(/[^0-9]/g,'')}?text=${encodeURIComponent(`Bonjour ${driver}, je vous contacte via Mobi-Campus. Votre trajet est-il disponible ?`)}`, '_blank');
+    }
+
+    // ─── Init ───
+    checkStatus();
+    loadTrajets();
+  </script>
+</body>
+</html>
