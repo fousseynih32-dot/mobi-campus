@@ -61,14 +61,18 @@ async function initDB() {
 }
 initDB();
 
-app.use(express.json());
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  cookie: { httpOnly: true, maxAge: 24 * 3600 * 1000 }
+  proxy: true,
+  cookie: { 
+    httpOnly: true, 
+    maxAge: 24 * 3600 * 1000,
+    secure: true,
+    sameSite: 'lax'
+  }
 }));
-app.use(express.static(path.join(__dirname, 'public')));
 
 function requireAdmin(req, res, next) {
   if (req.session.isAdmin) return next();
